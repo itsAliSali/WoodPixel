@@ -123,6 +123,7 @@ Texture Texture::rotate(double angle_rad) const
   Texture texture_rotated;
   texture_rotated.angle_rad = angle_rad;
   texture_rotated.dpi = dpi;
+  texture_rotated.cut_margin = cut_margin;
   texture_rotated.scale = scale;
   texture_rotated.transformation_matrix = compute_transformation_matrix(texture, angle_rad);
   cv::invertAffineTransform(texture_rotated.transformation_matrix, texture_rotated.transformation_matrix_inv);

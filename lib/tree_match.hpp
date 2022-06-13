@@ -44,8 +44,8 @@ public:
   static TreeMatch load(const boost::filesystem::path &path, bool load_textures);
 
   void add_target(const boost::filesystem::path &path, double dpi, double scale);
-  void add_texture(const boost::filesystem::path &path, double dpi, double scale, int num_rotations, const TextureMarker &marker = TextureMarker(), const std::string id = std::string());
-  void add_texture(const boost::filesystem::path &path, const boost::filesystem::path &mask, double dpi, double scale, int num_rotations, const TextureMarker &marker = TextureMarker(), const std::string id = std::string());
+  void add_texture(const boost::filesystem::path &path, double dpi, double cut_margin, double scale, int num_rotations, const TextureMarker &marker = TextureMarker(), const std::string id = std::string());
+  void add_texture(const boost::filesystem::path &path, const boost::filesystem::path &mask, double dpi, double cut_margin, double scale, int num_rotations, const TextureMarker &marker = TextureMarker(), const std::string id = std::string());
 
   void generate_patches(int target_index, const Grid &morphed_grid, cv::Mat edge_image);
   void generate_patches_square(int target_index);

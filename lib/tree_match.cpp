@@ -89,26 +89,26 @@ cv::Mat TreeMatch::compute_priority_map(const cv::Mat &texture_in)
   return texture;
 }
 
-void TreeMatch::add_texture(const boost::filesystem::path &path, double dpi, double scale, int num_rotations, const TextureMarker &marker, const std::string id)
+void TreeMatch::add_texture(const boost::filesystem::path &path, double dpi, double cut_margin, double scale, int num_rotations, const TextureMarker &marker, const std::string id)
 {
   m_textures.emplace_back();
-  m_textures.back().emplace_back(path, dpi, scale, marker, id);
+  m_textures.back().emplace_back(path, dpi, cut_margin, scale, marker, id);
   for (int i = 1; i < num_rotations; ++i)
   {
     m_textures.back().push_back(m_textures.back()[0].rotate(-i * 2.0f * boost::math::float_constants::pi / num_rotations));
   }
 }
 
-void TreeMatch::add_texture(const boost::filesystem::path &path, const boost::filesystem::path &mask, double dpi, double scale, int num_rotations, const TextureMarker &marker, const std::string id)
+void TreeMatch::add_texture(const boost::filesystem::path &path, const boost::filesystem::path &mask, double dpi, double cut_margin, double scale, int num_rotations, const TextureMarker &marker, const std::string id)
 {
   if (mask.empty() || !fs::exists(mask) || !fs::is_regular_file(mask))
   {
-    add_texture(path, dpi, scale, num_rotations, marker, id);
+    add_texture(path, dpi, cut_margin, scale, num_rotations, marker, id);
   }
   else
   {
     m_textures.emplace_back();
-    m_textures.back().emplace_back(path, mask, dpi, scale, marker, id);
+    m_textures.back().emplace_back(path, mask, dpi, cut_margin, scale, marker, id);
     for (int i = 1; i < num_rotations; ++i)
     {
       m_textures.back().push_back(m_textures.back()[0].rotate(-i * 2.0f * boost::math::float_constants::pi / num_rotations));
@@ -711,7 +711,8 @@ void TreeMatch::mask_patch_resources(const Patch &patch, const cv::Mat &mask)
     cv::Mat transform_mask = AffineTransformation::concat(m_textures[patch.source_index][i].transformation_matrix, texture_source.transformation_matrix_inv);
     cv::Mat mask_rotated;
     cv::warpAffine(mask_texture_new, mask_rotated, transform_mask, m_textures[patch.source_index][i].mask_done.size(), cv::INTER_NEAREST, cv::BORDER_CONSTANT, cv::Scalar(1));
-    cv::erode(mask_rotated, mask_rotated, cv::Mat::ones(3, 3, CV_8UC1));
+    int k_size = m_textures[patch.source_index][i].cut_margin * 2 + 1;
+    cv::erode(mask_rotated, mask_rotated, cv::Mat::ones(k_size, k_size, CV_8UC1));
     m_textures[patch.source_index][i].mask_done = cv::min(m_textures[patch.source_index][i].mask_done, mask_rotated);
   }
 }
@@ -760,7 +761,8 @@ void TreeMatch::unmask_patch_resources(const Patch &patch, const cv::Mat &mask)
     cv::Mat transform_mask = AffineTransformation::concat(m_textures[patch.source_index][i].transformation_matrix, texture_source.transformation_matrix_inv);
     cv::Mat mask_rotated;
     cv::warpAffine(mask_texture_new, mask_rotated, transform_mask, m_textures[patch.source_index][i].mask_done.size(), cv::INTER_NEAREST, cv::BORDER_CONSTANT, cv::Scalar(1));
-    cv::erode(mask_rotated, mask_rotated, cv::Mat::ones(3, 3, CV_8UC1));
+    int k_size = m_textures[patch.source_index][i].cut_margin * 2 + 1;
+    cv::erode(mask_rotated, mask_rotated, cv::Mat::ones(k_size, k_size, CV_8UC1));
     mask_rotated = 1 - mask_rotated;
     m_textures[patch.source_index][i].mask_done = cv::max(m_textures[patch.source_index][i].mask_done, mask_rotated);
   }
@@ -1232,6 +1234,7 @@ TreeMatch TreeMatch::load(const boost::filesystem::path &path, bool load_texture
     fs::path path_mask;
     double scale;
     double dpi;
+    double cut_margin;
     TextureMarker markers;
   } texture_json_t;
 
@@ -1284,6 +1287,7 @@ TreeMatch TreeMatch::load(const boost::filesystem::path &path, bool load_texture
         t.path_mask = tree_texture_json.get<fs::path>("mask");
         t.markers.load(path_texture_json.parent_path(), tree_texture_json);
         t.dpi = tree_texture_json.get<double>("dpi");
+        t.cut_margin = tree_texture_json.get<double>("cut_margin");
         t.scale = tree_source.second.get<double>("scale");
 
         if (!fs::exists(t.path_texture))
@@ -1316,6 +1320,7 @@ TreeMatch TreeMatch::load(const boost::filesystem::path &path, bool load_texture
         }
 
         t.dpi = tree_source.second.get<double>("dpi");
+        t.cut_margin = tree_source.second.get<double>("cut_margin");
         t.scale = tree_source.second.get<double>("scale");
 
         if (!fs::exists(t.path_texture))
@@ -1401,6 +1406,7 @@ TreeMatch TreeMatch::load(const boost::filesystem::path &path, bool load_texture
                 << "  source_filename_mask: " << t.path_mask << std::endl
                 << "  source_scale: " << t.scale << std::endl
                 << "  source_dpi: " << t.dpi << std::endl
+                << "  source_cut_margin: " << t.cut_margin << std::endl
                 << "  num_markers: " << t.markers.markers_pix.size() << std::endl;
     }
 
@@ -1455,7 +1461,7 @@ TreeMatch TreeMatch::load(const boost::filesystem::path &path, bool load_texture
   {
     for (const texture_json_t &t : sources_json)
     {
-      matcher.add_texture(t.path_texture, t.path_mask, t.dpi, t.scale, num_source_rotations, t.markers, t.id);
+      matcher.add_texture(t.path_texture, t.path_mask, t.dpi, t.cut_margin, t.scale, num_source_rotations, t.markers, t.id);
     }
     matcher.compute_responses(weight_intensity, weight_sobel, weight_gabor, histogram_matching);
   }

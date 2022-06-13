@@ -48,8 +48,8 @@ class Texture : public Serializable
 public:
   Texture() = default;
   Texture(const boost::filesystem::path &filename, double dpi, double scale, const TextureMarker marker = TextureMarker(), const std::string id = std::string()) : dpi(scale * dpi),
-                                                                                                                                                                   scale(scale),
-                                                                                                                                                                   id(id)
+                                                                                                                                                                        scale(scale),
+                                                                                                                                                                        id(id)
   {
     load_texture(filename, scale);
 
@@ -61,10 +61,26 @@ public:
     angle_rad = 0.0;
     this->filename = filename;
   }
+  
+  Texture(const boost::filesystem::path &filename, double dpi, double cut_margin_mm, double scale, const TextureMarker marker = TextureMarker(), const std::string id = std::string()) : dpi(scale * dpi),
+                                                                                                                                                                                          scale(scale),
+                                                                                                                                                                                          id(id)
+  {
+    load_texture(filename, scale);
+
+    this->marker = marker.scaled(scale);
+    mask_done = cv::Mat(texture.size(), CV_8UC1, cv::Scalar(255));
+    mask_rotation = cv::Mat(texture.size(), CV_8UC1, cv::Scalar(255));
+    transformation_matrix = cv::Mat::eye(2, 3, CV_64FC1);
+    transformation_matrix_inv = cv::Mat::eye(2, 3, CV_64FC1);
+    angle_rad = 0.0;
+    this->filename = filename;
+    this->cut_margin =  std::ceil(scale * (cut_margin_mm/25.4*dpi));
+  }
 
   Texture(const boost::filesystem::path &filename, const boost::filesystem::path &filename_mask, double dpi, double scale, TextureMarker marker = TextureMarker(), const std::string id = std::string()) : dpi(scale * dpi),
-                                                                                                                                                                                                           scale(scale),
-                                                                                                                                                                                                           id(id)
+                                                                                                                                                                                                                                  scale(scale),
+                                                                                                                                                                                                                                  id(id)
   {
     load_texture(filename, scale);
     load_mask(filename_mask, scale);
@@ -75,6 +91,22 @@ public:
     transformation_matrix_inv = cv::Mat::eye(2, 3, CV_64FC1);
     angle_rad = 0.0;
     this->filename = filename;
+  }
+
+  Texture(const boost::filesystem::path &filename, const boost::filesystem::path &filename_mask, double dpi, double cut_margin_mm, double scale, TextureMarker marker = TextureMarker(), const std::string id = std::string()) : dpi(scale * dpi),
+                                                                                                                                                                                                                                  scale(scale),
+                                                                                                                                                                                                                                  id(id)
+  {
+    load_texture(filename, scale);
+    load_mask(filename_mask, scale);
+
+    this->marker = marker.scaled(scale);
+    mask_rotation = cv::Mat(texture.size(), CV_8UC1, cv::Scalar(255));
+    transformation_matrix = cv::Mat::eye(2, 3, CV_64FC1);
+    transformation_matrix_inv = cv::Mat::eye(2, 3, CV_64FC1);
+    angle_rad = 0.0;
+    this->filename = filename;
+    this->cut_margin =  std::ceil(scale * (cut_margin_mm/25.4*dpi));
   }
 
   virtual void load(const boost::filesystem::path &base_path, const boost::property_tree::ptree &tree) override;
@@ -124,6 +156,7 @@ public:
   double angle_rad;
   double scale;
   double dpi;
+  int cut_margin;
 
   FeatureVector response;
 
