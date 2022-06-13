@@ -4,3 +4,14 @@ finishNet/__pycache__
 .vscode/
 output/
 data/
+
+
+bin/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+lib/*.a
+
+.vscode/
+
