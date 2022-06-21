@@ -22,12 +22,14 @@ result = json.load(result)
 
 patches = result['patches']
 sources = result['textures_source']
+sources_img = []
 # target = result['texture_target']
 sources_output = []
 sources_output1 = []
 sources_output2 = []
 for i in range(len(sources)):
     source_texture = cv2.imread(os.path.join(args.i, sources[i]['filename']))
+    sources_img.append(source_texture)
     sources_output.append(np.ones(source_texture.shape, dtype=np.uint8)*255)
     sources_output1.append(np.ones(source_texture.shape, dtype=np.uint8)*255)
     sources_output2.append(np.ones(source_texture.shape, dtype=np.uint8)*255)
@@ -149,6 +151,7 @@ for i in range(len(sources)):
     # cv2.imwrite(os.path.join(args.i, "cut_path", f'src_indx_{i}.jpg'), sources_output[i])
     cv2.imwrite(os.path.join(args.i, "cut_path", f'a_src_indx_{i}.jpg'), sources_output1[i])
     cv2.imwrite(os.path.join(args.i, "cut_path", f'b_src_indx_{i}.jpg'), sources_output2[i])
+    cv2.imwrite(os.path.join(args.i, "cut_path", f'c_src_indx_{i}.jpg'), cv2.add(255-sources_output2[i], sources_img[i]))
 # print("3"*13)
 
 for i in range(len(sources)):
