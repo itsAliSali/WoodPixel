@@ -24,9 +24,13 @@ patches = result['patches']
 sources = result['textures_source']
 # target = result['texture_target']
 sources_output = []
+sources_output1 = []
+sources_output2 = []
 for i in range(len(sources)):
     source_texture = cv2.imread(os.path.join(args.i, sources[i]['filename']))
     sources_output.append(np.ones(source_texture.shape, dtype=np.uint8)*255)
+    sources_output1.append(np.ones(source_texture.shape, dtype=np.uint8)*255)
+    sources_output2.append(np.ones(source_texture.shape, dtype=np.uint8)*255)
     # cv2.imshow('qwer'+str(i), source_texture)
 
 
@@ -93,15 +97,26 @@ for i in range(len(patches)):
     edge_p = p_mask - msk_e
     edge_p[:,:,2] = 0
 
-    cut_src = np.ones((src_t_size[1], src_t_size[0], 3), dtype=np.uint8) * 255
-    print(i, cut_src[int(anchor_src['y']):int(anchor_src['y'])+h, int(anchor_src['x']):int(anchor_src['x'])+w].shape, edge_p.shape)
-    cut_src[int(anchor_src['y']):int(anchor_src['y'])+h, int(anchor_src['x']):int(anchor_src['x'])+w] = cut_src[int(anchor_src['y']):int(anchor_src['y'])+h, int(anchor_src['x']):int(anchor_src['x'])+w]* (1- p_mask//255)
+    cut_src0 = np.ones((src_t_size[1], src_t_size[0], 3), dtype=np.uint8) * 255
+    cut_src1 = np.ones((src_t_size[1], src_t_size[0], 3), dtype=np.uint8) * 255
+    cut_src2 = np.ones((src_t_size[1], src_t_size[0], 3), dtype=np.uint8) * 255
+    print(i, cut_src0[int(anchor_src['y']):int(anchor_src['y'])+h, int(anchor_src['x']):int(anchor_src['x'])+w].shape, edge_p.shape)
+    cut_src0[int(anchor_src['y']):int(anchor_src['y'])+h, int(anchor_src['x']):int(anchor_src['x'])+w] = cut_src0[int(anchor_src['y']):int(anchor_src['y'])+h, int(anchor_src['x']):int(anchor_src['x'])+w]* (1- p_mask//255)
+    cut_src1[int(anchor_src['y']):int(anchor_src['y'])+h, int(anchor_src['x']):int(anchor_src['x'])+w] = cut_src1[int(anchor_src['y']):int(anchor_src['y'])+h, int(anchor_src['x']):int(anchor_src['x'])+w]* (1- edge_p//255)
+    cut_src2[int(anchor_src['y']):int(anchor_src['y'])+h, int(anchor_src['x']):int(anchor_src['x'])+w] = cut_src2[int(anchor_src['y']):int(anchor_src['y'])+h, int(anchor_src['x']):int(anchor_src['x'])+w]* (1- edge_p//255)
+    
     # cv2.imshow('1', cut_src)
-    cut_src = cv2.warpAffine(cut_src, ts_inv, (source_texture.shape[1], source_texture.shape[0]))
+    
+    org =  (int(anchor_src['x'])+int(w/2.7), int(anchor_src['y'])+int(h/1.7))
+    cut_src2 = cv2.putText(cut_src2, str(i), org, cv2.FONT_HERSHEY_SIMPLEX, 0.4, (50, 210, 50), 1)
+
+    cut_src0 = cv2.warpAffine(cut_src0, ts_inv, (source_texture.shape[1], source_texture.shape[0]))
+    cut_src1 = cv2.warpAffine(cut_src1, ts_inv, (source_texture.shape[1], source_texture.shape[0]))
+    cut_src2 = cv2.warpAffine(cut_src2, ts_inv, (source_texture.shape[1], source_texture.shape[0]))
 
     # cv2.imshow('1.5', p_mask)
     # print(anchor_src)
-    _, thresh = cv2.threshold(cut_src, 180, 255, 0)
+    _, thresh = cv2.threshold(cut_src0, 180, 255, 0)
     # cv2.imshow('2', cut_src)
     thresh = 255-thresh
     # cv2.imshow('2.1', thresh)
@@ -116,7 +131,9 @@ for i in range(len(patches)):
 
     # if len(sources_output) == 0:
     # print(cut_src.shape, sources_output[source_index].shape)
-    sources_output[source_index] = np.fmin(sources_output[source_index], cut_src)
+    sources_output[source_index] = np.fmin(sources_output[source_index], cut_src0)
+    sources_output1[source_index] = np.fmin(sources_output1[source_index], cut_src1)
+    sources_output2[source_index] = np.fmin(sources_output2[source_index], cut_src2)
 
     # cv2.imshow('source_texture', source_texture)
     # cv2.imshow('s1tt', src_t_t)
@@ -129,7 +146,9 @@ cv2.destroyAllWindows()
 
 os.makedirs(os.path.join(args.i, "cut_path"), exist_ok = True)
 for i in range(len(sources)):
-    cv2.imwrite(os.path.join(args.i, "cut_path", f'src_indx_{i}.jpg'), sources_output[i])
+    # cv2.imwrite(os.path.join(args.i, "cut_path", f'src_indx_{i}.jpg'), sources_output[i])
+    cv2.imwrite(os.path.join(args.i, "cut_path", f'a_src_indx_{i}.jpg'), sources_output1[i])
+    cv2.imwrite(os.path.join(args.i, "cut_path", f'b_src_indx_{i}.jpg'), sources_output2[i])
 # print("3"*13)
 
 for i in range(len(sources)):
